@@ -2,85 +2,76 @@
 
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Check } from 'lucide-react';
-import { useRouter } from "next/navigation"
-
-
+import { useRouter } from "next/navigation";
 
 type Gender = 'homme' | 'femme' | 'autre';
 type AccountType = 'client' | 'vendeur';
-
-interface FormData {
-    firstName: string;
-    lastName: string;
-    email: string;
-    gender: Gender;
-    country: string;
-    city: string;
-    address: string;
-    accountType: AccountType;
-    password: string;
-}
 
 export default function Home() {
     const [step, setStep] = useState(1);
     const redirecte = useRouter();
 
-    const [formData, setFormData] = useState<FormData>({
+    // Variables d'état pour chaque champ
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [email, setEmail] = useState('');
+    const [gender, setGender] = useState<Gender>('autre');
+    const [country, setCountry] = useState('');
+    const [city, setCity] = useState('');
+    const [address, setAddress] = useState('');
+    const [accountType, setAccountType] = useState<AccountType>('client');
+    const [password, setPassword] = useState('');
+    const [message, setMessage] = useState("");
+
+    // Variable d'état pour les erreurs
+    const [errors, setErrors] = useState({
         firstName: '',
         lastName: '',
         email: '',
-        gender: 'autre',
         country: '',
         city: '',
         address: '',
-        accountType: 'client',
+        accountType: '',
         password: '',
     });
-    const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
 
 
-    // Fonction pour la soumission du formulaire
-    const [message, setMessage] = useState("");
     const submitForm = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setMessage(""); // Réinitialisation du message
 
-        try {
+        // Si les erreurs sont présentes, on arrête le formulaire
+        if (Object.values(errors).some(error => error)) {
+            return;
+        }
 
+        try {
             const req = await fetch("/serveur/sign-up", {
                 headers: { "Content-type": "application/json" },
-                method: "Post",
-                body: JSON.stringify({ formData })
-            })
+                method: "POST",
+                body: JSON.stringify({ firstName, lastName, email, gender, country, city, address, accountType, password })
+            });
 
-            const res = await req.json()
-            // Vérification des champs requis
+            const res = await req.json();
             if (res && res.data) {
-                console.log(res.data)
-                // Si l'utilisateur existe dans Firestore, rediriger
-                setMessage("Connexion réussie !")
-                localStorage.setItem("user", JSON.stringify(res.data))
-                redirecte.push("/dashboard"); // Redirection vers le dashboard
-
+                console.log(res.data);
+                setMessage("Connexion réussie !");
+                localStorage.setItem("user", JSON.stringify(res.data));
+                redirecte.push("/dashboard");
                 return;
             } else {
-                console.log(res)
-                setMessage("création avec succès")
+                console.log(res);
+                setMessage("Création réussie");
             }
-
         } catch (error: any) {
             console.error("Erreur lors de la connexion");
 
-            // Gestion des erreurs Firebase Auth
             if (error.code === "auth/user-not-found") {
                 setMessage("Aucun compte trouvé avec cet email.");
-
             } else if (error.code === "auth/wrong-password") {
                 setMessage("Mot de passe incorrect.");
-
             } else if (error.code === "auth/network-request-failed") {
                 setMessage("Problème de connexion internet.");
-
             } else if (error.code === "auth/invalid-credential") {
                 setMessage("Identifiants invalides. Veuillez vous inscrire.");
             } else {
@@ -89,32 +80,30 @@ export default function Home() {
         }
     };
 
-
-
     const totalSteps = 4;
 
     const validateStep = () => {
-        const newErrors: Partial<Record<keyof FormData, string>> = {};
+        const newErrors: any = {};
 
         switch (step) {
             case 1:
-                if (!formData.firstName) newErrors.firstName = "Le prénom est obligatoire";
-                if (!formData.lastName) newErrors.lastName = "Le nom de famille est obligatoire";
-                if (!formData.email) newErrors.email = "L'email est obligatoire";
-                else if (!/\S+@\S+\.\S+/.test(formData.email))
+                if (!firstName) newErrors.firstName = "Le prénom est obligatoire";
+                if (!lastName) newErrors.lastName = "Le nom de famille est obligatoire";
+                if (!email) newErrors.email = "L'email est obligatoire";
+                else if (!/\S+@\S+\.\S+/.test(email))
                     newErrors.email = "Format d'email invalide";
                 break;
             case 2:
-                if (!formData.country) newErrors.country = "Le pays est obligatoire";
-                if (!formData.city) newErrors.city = "La ville est obligatoire";
-                if (!formData.address) newErrors.address = "L'adresse est obligatoire";
+                if (!country) newErrors.country = "Le pays est obligatoire";
+                if (!city) newErrors.city = "La ville est obligatoire";
+                if (!address) newErrors.address = "L'adresse est obligatoire";
                 break;
             case 3:
-                if (!formData.accountType) newErrors.accountType = "Le type de compte est obligatoire";
+                if (!accountType) newErrors.accountType = "Le type de compte est obligatoire";
                 break;
             case 4:
-                if (!formData.password) newErrors.password = "Le mot de passe est obligatoire";
-                else if (formData.password.length < 8)
+                if (!password) newErrors.password = "Le mot de passe est obligatoire";
+                else if (password.length < 8)
                     newErrors.password = "Le mot de passe doit contenir au moins 8 caractères";
                 break;
         }
@@ -128,7 +117,7 @@ export default function Home() {
             if (step < totalSteps) {
                 setStep(step + 1);
             } else {
-                handleSubmit();
+                submitForm;
             }
         }
     };
@@ -139,15 +128,8 @@ export default function Home() {
         }
     };
 
-    const handleSubmit = () => {
-        console.log('donnée envoyer:', formData);
-        alert('Inscription réussie !');
-    };
-
     const inputClassName = (error?: string) =>
-        `w-full px-4 py-2 rounded-lg border ${error ? 'border-red-500' : 'border-gray-300'
-        } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`;
-        
+        `w-full px-4 py-2 rounded-lg border ${error ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent`;
 
     const renderStep1 = () => (
         <div className="space-y-6">
@@ -158,8 +140,8 @@ export default function Home() {
                     </label>
                     <input
                         type="text"
-                        value={formData.firstName}
-                        onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
                         className={inputClassName(errors.firstName)}
                         placeholder="Votre prénom"
                     />
@@ -172,8 +154,8 @@ export default function Home() {
                     </label>
                     <input
                         type="text"
-                        value={formData.lastName}
-                        onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
                         className={inputClassName(errors.lastName)}
                         placeholder="Votre nom de famille"
                     />
@@ -184,15 +166,15 @@ export default function Home() {
             <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">Genre</label>
                 <div className="flex space-x-4">
-                    {(['homme', 'femme', 'autre'] as const).map((gender) => (
-                        <label key={gender} className="flex items-center space-x-2">
+                    {(['homme', 'femme', 'autre'] as const).map((genderOption) => (
+                        <label key={genderOption} className="flex items-center space-x-2">
                             <input
                                 type="radio"
-                                checked={formData.gender === gender}
-                                onChange={() => setFormData({ ...formData, gender })}
+                                checked={gender === genderOption}
+                                onChange={() => setGender(genderOption)}
                                 className="text-blue-500 focus:ring-blue-500"
                             />
-                            <span className="text-sm text-gray-700 capitalize">{gender}</span>
+                            <span className="text-sm text-gray-700 capitalize">{genderOption}</span>
                         </label>
                     ))}
                 </div>
@@ -204,8 +186,8 @@ export default function Home() {
                 </label>
                 <input
                     type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className={inputClassName(errors.email)}
                     placeholder="votre@email.com"
                 />
@@ -217,13 +199,11 @@ export default function Home() {
     const renderStep2 = () => (
         <div className="space-y-6">
             <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                    Pays
-                </label>
+                <label className="block text-sm font-medium text-gray-700">Pays</label>
                 <input
                     type="text"
-                    value={formData.country}
-                    onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
                     className={inputClassName(errors.country)}
                     placeholder="Votre pays"
                 />
@@ -231,23 +211,23 @@ export default function Home() {
             </div>
 
             <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                    Ville
-                </label>
-                <input type="text" value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} className={inputClassName(errors.city)}
+                <label className="block text-sm font-medium text-gray-700">Ville</label>
+                <input
+                    type="text"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    className={inputClassName(errors.city)}
                     placeholder="Votre ville"
                 />
                 {errors.city && <p className="text-sm text-red-500">{errors.city}</p>}
             </div>
 
             <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                    Adresse
-                </label>
+                <label className="block text-sm font-medium text-gray-700">Adresse</label>
                 <input
                     type="text"
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
                     className={inputClassName(errors.address)}
                     placeholder="Votre adresse"
                 />
@@ -259,24 +239,15 @@ export default function Home() {
     const renderStep3 = () => (
         <div className="space-y-6">
             <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                    Type de compte
-                </label>
-                <div className="space-y-4">
-                    {(['client', 'vendeur'] as const).map((type) => (
-                        <label key={type} className="flex items-center space-x-2">
-                            <input
-                                type="radio"
-                                checked={formData.accountType === type}
-                                onChange={() => setFormData({ ...formData, accountType: type })}
-                                className="text-blue-500 focus:ring-blue-500"
-                            />
-                            <span className="text-sm text-gray-700 capitalize">
-                                Compte {type}
-                            </span>
-                        </label>
-                    ))}
-                </div>
+                <label className="block text-sm font-medium text-gray-700">Type de compte</label>
+                <select
+                    value={accountType}
+                    onChange={(e) => setAccountType(e.target.value as AccountType)}
+                    className={inputClassName(errors.accountType)}
+                >
+                    <option value="client">Client</option>
+                    <option value="vendeur">Vendeur</option>
+                </select>
                 {errors.accountType && <p className="text-sm text-red-500">{errors.accountType}</p>}
             </div>
         </div>
@@ -285,15 +256,13 @@ export default function Home() {
     const renderStep4 = () => (
         <div className="space-y-6">
             <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                    Mot de passe
-                </label>
+                <label className="block text-sm font-medium text-gray-700">Mot de passe</label>
                 <input
                     type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     className={inputClassName(errors.password)}
-                    placeholder="Votre mot de passe"
+                    placeholder="Mot de passe"
                 />
                 {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
             </div>
@@ -327,25 +296,28 @@ export default function Home() {
                     {step === 4 && renderStep4()}
                 </div>
 
-                <div className="flex justify-between"> <button onClick={handleBack}className={`flex items-center px-4 py-2 rounded-lg transition-colors ${step === 1
-                 ? 'text-gray-400 cursor-not-allowed'
-                 : 'text-gray-600 hover:bg-gray-100' }`}disabled={step === 1}><ChevronLeft className="w-5 h-5 mr-2" />
+                <div className="flex justify-between">
+                    <button
+                        onClick={handleBack}
+                        className={`flex items-center px-4 py-2 rounded-lg transition-colors ${step === 1
+                            ? 'text-gray-400 cursor-not-allowed'
+                            : 'text-gray-600 hover:bg-gray-100'
+                            }`}
+                        disabled={step === 1}
+                    >
+                        <ChevronLeft className="w-5 h-5 mr-2" />
                         Retour
                     </button>
 
                     <button onClick={handleNext} className="flex items-center px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-                        {message || (step === totalSteps ? (
-                            <>
-                                Soumettre <Check className="w-5 h-5 ml-2" />
+                        {message || (step === totalSteps ? ( <>Soumettre <Check className="w-5 h-5 ml-2" />
                             </>
                         ) : (
-                            <>
-                                Suivant
+                            <>Suivant
                                 <ChevronRight className="w-5 h-5 ml-2" />
                             </>
                         ))}
                     </button>
-
                 </div>
             </div>
         </main>
