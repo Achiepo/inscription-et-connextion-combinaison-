@@ -4,6 +4,7 @@ import GoogleLogin from "@/Components/googleLogin"
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import './css/Styles.css'
 
 export default function Login() {
   const router = useRouter();
@@ -48,7 +49,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/20 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/20 p-4" id="img">
       <div className="w-full max-w-md backdrop-blur-sm border-2 shadow-lg rounded-lg p-6 space-y-6">
         {/* Header */}
         <div className="text-center space-y-3">

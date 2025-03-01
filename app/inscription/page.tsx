@@ -36,49 +36,38 @@ export default function Home() {
     });
 
 
-    const submitForm = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
+    const submitForm = async () => {
+
         setMessage(""); // Réinitialisation du message
 
-        // Si les erreurs sont présentes, on arrête le formulaire
-        if (Object.values(errors).some(error => error)) {
+        const req = await fetch("/serveur/sign-up", {
+            headers: { "Content-type": "application/json" },
+            method: "POST",
+            body: JSON.stringify({ firstName, lastName, email, gender, country, city, address, accountType, password })
+        });
+
+        const res = await req.json();
+        console.log(res.data);
+        if (res && res.data) {
+            console.log(res.data);
+            setMessage("Utilisateur crée avec succès !");
+            localStorage.setItem("user", JSON.stringify(res.data));
+            if (res.data. accountType === "client") {
+                 setTimeout(()=>{
+                redirecte.push("/");
+            },1000)
+            }else{
+                setTimeout(()=>{
+                    redirecte.push("/dashbord");
+                },1000)
+            }
+           
+           
             return;
+        } else {
+            setMessage(res);
         }
-
-        try {
-            const req = await fetch("/serveur/sign-up", {
-                headers: { "Content-type": "application/json" },
-                method: "POST",
-                body: JSON.stringify({ firstName, lastName, email, gender, country, city, address, accountType, password })
-            });
-
-            const res = await req.json();
-            if (res && res.data) {
-                console.log(res.data);
-                setMessage("Connexion réussie !");
-                localStorage.setItem("user", JSON.stringify(res.data));
-                redirecte.push("/dashboard");
-                return;
-            } else {
-                console.log(res);
-                setMessage("Création réussie");
-            }
-        } catch (error: any) {
-            console.error("Erreur lors de la connexion");
-
-            if (error.code === "auth/user-not-found") {
-                setMessage("Aucun compte trouvé avec cet email.");
-            } else if (error.code === "auth/wrong-password") {
-                setMessage("Mot de passe incorrect.");
-            } else if (error.code === "auth/network-request-failed") {
-                setMessage("Problème de connexion internet.");
-            } else if (error.code === "auth/invalid-credential") {
-                setMessage("Identifiants invalides. Veuillez vous inscrire.");
-            } else {
-                setMessage("Erreur lors de la connexion. Vérifiez vos identifiants.");
-            }
-        }
-    };
+    }
 
     const totalSteps = 4;
 
@@ -117,7 +106,7 @@ export default function Home() {
             if (step < totalSteps) {
                 setStep(step + 1);
             } else {
-                submitForm;
+                submitForm()
             }
         }
     };
@@ -166,7 +155,7 @@ export default function Home() {
             <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">Genre</label>
                 <div className="flex space-x-4">
-                    {(['homme', 'femme', 'autre'] as const).map((genderOption) => (
+                    {(['homme', 'femme'] as const).map((genderOption) => (
                         <label key={genderOption} className="flex items-center space-x-2">
                             <input
                                 type="radio"
@@ -239,20 +228,28 @@ export default function Home() {
     const renderStep3 = () => (
         <div className="space-y-6">
             <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Type de compte</label>
-                <select
-                    value={accountType}
-                    onChange={(e) => setAccountType(e.target.value as AccountType)}
-                    className={inputClassName(errors.accountType)}
-                >
-                    <option value="client">Client</option>
-                    <option value="vendeur">Vendeur</option>
-                </select>
+                <label className="block text-sm font-medium text-gray-700">
+                    Type de compte
+                </label>
+                <div className="space-y-4">
+                    {(['client', 'vendeur'] as const).map((type) => (
+                        <label key={type} className="flex items-center space-x-2">
+                            <input
+                                type="radio"
+                                value={accountType}
+                                onChange={(e) => setAccountType(e.target.value as AccountType)}
+                                className="text-blue-500 focus:ring-blue-500"
+                            />
+                            <span className="text-sm text-gray-700 capitalize">
+                                Compte {type}
+                            </span>
+                        </label>
+                    ))}
+                </div>
                 {errors.accountType && <p className="text-sm text-red-500">{errors.accountType}</p>}
             </div>
         </div>
     );
-
     const renderStep4 = () => (
         <div className="space-y-6">
             <div className="space-y-2">
@@ -296,6 +293,7 @@ export default function Home() {
                     {step === 4 && renderStep4()}
                 </div>
 
+
                 <div className="flex justify-between">
                     <button
                         onClick={handleBack}
@@ -310,8 +308,8 @@ export default function Home() {
                     </button>
 
                     <button onClick={handleNext} className="flex items-center px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-                        {message || (step === totalSteps ? ( <>Soumettre <Check className="w-5 h-5 ml-2" />
-                            </>
+                        {(step === totalSteps ? (<>Soumettre <Check className="w-5 h-5 ml-2" />
+                        </>
                         ) : (
                             <>Suivant
                                 <ChevronRight className="w-5 h-5 ml-2" />
@@ -319,6 +317,13 @@ export default function Home() {
                         ))}
                     </button>
                 </div>
+                <p className={`text-center text-xl font-semibold  p-4 mt-12  w-4/5 mx-auto
+                 ${message.includes("succès") ? 'text-green-500' : 'text-red-500'}`}
+                >
+                    {message}
+                </p>
+
+
             </div>
         </main>
     );
